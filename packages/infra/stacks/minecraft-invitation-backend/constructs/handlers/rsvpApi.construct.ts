@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import { Construct } from 'constructs'
 import { StandardLambda } from '../../../../common/StandardLambda'
+import { StandardRestApi } from '../../../../common/StandardRestApi'
 import * as path from 'path'
 
 export type RsvpApiConstructProps = {
@@ -60,39 +61,17 @@ export class RsvpApiConstruct extends Construct {
 
     rsvpTable.grantReadWriteData(this.postRsvpHandler)
 
-    // Determine allowed origins for CORS
-    const allowedOrigins =
-      certificate && domainName && apiSubdomain
-        ? [`https://${apiSubdomain}.${domainName}`]
-        : apigateway.Cors.ALL_ORIGINS
-
-    // Create API Gateway REST API
-    this.api = new apigateway.RestApi(this, 'RestApi', {
-      restApiName: `${appName}-api-${stage}`,
-      description: `API for ${appName}`,
-      defaultCorsPreflightOptions: {
-        allowOrigins: allowedOrigins,
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowHeaders: [
-          'Content-Type',
-          'X-Amz-Date',
-          'Authorization',
-          'X-Api-Key',
-          'x-device-id',
-        ],
-        allowCredentials: true,
-      },
-      deployOptions: {
-        stageName: stage,
-      },
+    const restApi = new StandardRestApi(this, 'RestApi', {
+      appName,
+      stage,
+      domainName,
+      subdomain: apiSubdomain,
+      certificate,
+      corsAllowHeaders: ['Content-Type', 'Authorization', 'x-device-id'],
     })
 
-    // Set API URL - use custom domain if available, otherwise use default
-    if (certificate && domainName && apiSubdomain) {
-      this.apiUrl = `https://${apiSubdomain}.${domainName}`
-    } else {
-      this.apiUrl = this.api.url
-    }
+    this.api = restApi.api
+    this.apiUrl = restApi.apiUrl
 
     const rsvp = this.api.root.addResource('rsvp')
 
