@@ -6,6 +6,9 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import { Construct } from 'constructs'
 import { StandardLambda } from '../../../../common/StandardLambda'
 import { StandardRestApi } from '../../../../common/StandardRestApi'
+import type { Config as GetRsvpConfig } from '../../../../app/src/minecraft-invitation/handlers/getRSVP/config'
+import type { Config as GetAllRsvpsConfig } from '../../../../app/src/minecraft-invitation/handlers/getAllRSVPs/config'
+import type { Config as PostRsvpConfig } from '../../../../app/src/minecraft-invitation/handlers/postRSVP/config'
 import * as path from 'path'
 
 export type RsvpApiConstructProps = {
@@ -20,6 +23,7 @@ export type RsvpApiConstructProps = {
 export class RsvpApiConstruct extends Construct {
   public readonly api: apigateway.RestApi
   public readonly getRsvpHandler: lambda.Function
+  public readonly getAllRsvpsHandler: lambda.Function
   public readonly postRsvpHandler: lambda.Function
   public readonly apiUrl: string
 
@@ -40,10 +44,26 @@ export class RsvpApiConstruct extends Construct {
       timeout: Duration.seconds(30),
       environment: {
         TABLE_NAME: rsvpTable.tableName,
-      },
+      } satisfies GetRsvpConfig,
     })
 
     rsvpTable.grantReadData(this.getRsvpHandler)
+
+    this.getAllRsvpsHandler = new StandardLambda(this, 'GetAllRsvpsHandler', {
+      appName,
+      entry: path.join(
+        __dirname,
+        '../../../../app/src/minecraft-invitation/handlers/getAllRSVPs/getAllRSVPs.handler.ts',
+      ),
+      handler: 'handler',
+      memorySize: 256,
+      timeout: Duration.seconds(30),
+      environment: {
+        TABLE_NAME: rsvpTable.tableName,
+      } satisfies GetAllRsvpsConfig,
+    })
+
+    rsvpTable.grantReadData(this.getAllRsvpsHandler)
 
     this.postRsvpHandler = new StandardLambda(this, 'PostRsvpHandler', {
       appName,
@@ -56,7 +76,7 @@ export class RsvpApiConstruct extends Construct {
       timeout: Duration.seconds(30),
       environment: {
         TABLE_NAME: rsvpTable.tableName,
-      },
+      } satisfies PostRsvpConfig,
     })
 
     rsvpTable.grantReadWriteData(this.postRsvpHandler)
@@ -75,12 +95,23 @@ export class RsvpApiConstruct extends Construct {
 
     const rsvp = this.api.root.addResource('rsvp')
 
-    // /rsvp endpoint
-    rsvp.addMethod('GET', new apigateway.LambdaIntegration(this.getRsvpHandler))
+    // GET /rsvp - get all RSVPs
+    rsvp.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.getAllRsvpsHandler),
+    )
 
+    // POST /rsvp
     rsvp.addMethod(
       'POST',
       new apigateway.LambdaIntegration(this.postRsvpHandler),
+    )
+
+    // GET /rsvp/{name} - get RSVP by name
+    const rsvpByName = rsvp.addResource('{name}')
+    rsvpByName.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(this.getRsvpHandler),
     )
   }
 }

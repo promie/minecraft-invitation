@@ -22,5 +22,11 @@ export class DynamoConstruct extends Construct {
       removalPolicy: RemovalPolicy.DESTROY,
       pointInTimeRecovery: false,
     })
+
+    // Add GSI for lookup by name
+    this.rsvpTable.addGlobalSecondaryIndex({
+      indexName: 'name-index',
+      partitionKey: { name: 'name', type: dynamodb.AttributeType.STRING },
+    })
   }
 }
