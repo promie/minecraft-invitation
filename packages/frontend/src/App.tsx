@@ -240,6 +240,20 @@ function App() {
     attending: string
     guests: number
   } | null>(null)
+  const [isMobile, setIsMobile] = useState(true)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      // Consider mobile if width is less than 768px
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Load RSVP from localStorage on mount
   useEffect(() => {
@@ -287,6 +301,65 @@ function App() {
       setSavedRsvp(rsvp)
     }
     setSubmitted(true)
+  }
+
+  // Show desktop message if not on mobile
+  if (!isMobile) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          padding: '20px',
+          textAlign: 'center',
+          backgroundColor: '#1a1a1a',
+          color: '#fff',
+        }}
+      >
+        <div
+          className="mc-card"
+          style={{
+            maxWidth: '600px',
+            padding: '40px',
+          }}
+        >
+          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📱</div>
+          <h1
+            style={{
+              fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+              color: '#56ab2f',
+              textShadow: '2px 2px 0 #000',
+              marginBottom: '20px',
+              fontFamily: "'Press Start 2P', cursive",
+            }}
+          >
+            MOBILE ONLY
+          </h1>
+          <p
+            style={{
+              fontSize: 'clamp(0.9rem, 2vw, 1.2rem)',
+              lineHeight: '1.6',
+              marginBottom: '20px',
+              color: '#fff',
+            }}
+          >
+            THIS IS BUILT FOR MOBILE
+            <br />
+            AND IT'S NOT REALLY FOR DESKTOP
+            <br />
+            <span style={{ color: '#f1c40f', marginTop: '10px', display: 'block' }}>
+              PLEASE VIEW IT ON MOBILE
+            </span>
+          </p>
+          <p style={{ fontSize: '0.8rem', color: '#7d7d7d', marginTop: '30px' }}>
+            THANKS!
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -854,7 +927,7 @@ function App() {
           zIndex: 2,
         }}
       >
-        <p>Don't be a creeper! RSVP by Oct 20th.</p>
+        <p>Don't be a creeper! RSVP by Nov 30th.</p>
       </footer>
     </div>
   )
