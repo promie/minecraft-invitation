@@ -3,7 +3,6 @@ import { Construct } from 'constructs'
 import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import { DynamoConstruct } from './constructs/storage/dynamo.construct'
 import { RsvpApiConstruct } from './constructs/handlers/rsvpApi.construct'
-import { ApiGatewayDomainConstruct } from './constructs/common/apiGatewayDomain.construct'
 
 export type MinecraftInvitationBackendStackProps = StackProps & {
   appName: string
@@ -31,7 +30,7 @@ export class MinecraftInvitationBackendStack extends Stack {
       stage,
     })
 
-    // Create RSVP API
+    // Create RSVP API (StandardRestApi already handles domain creation)
     const api = new RsvpApiConstruct(this, 'Api', {
       appName,
       stage,
@@ -40,16 +39,6 @@ export class MinecraftInvitationBackendStack extends Stack {
       apiSubdomain,
       certificate,
     })
-
-    // Add custom domain if certificate and domain are provided
-    if (certificate && domainName && apiSubdomain) {
-      new ApiGatewayDomainConstruct(this, 'ApiDomain', {
-        api: api.api,
-        customDomain: `${apiSubdomain}.${domainName}`,
-        baseDomain: domainName,
-        certificate,
-      })
-    }
 
     this.apiUrl = api.apiUrl
 
