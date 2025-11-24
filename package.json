@@ -15,7 +15,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --all --require-approval never",
+    "deploy": "AWS_PROFILE=promie npm run build:frontend && AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --all --require-approval never",
     "deploy:infra": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --require-approval never",
     "diff": "AWS_PROFILE=promie npx cdk diff",
     "synth": "AWS_PROFILE=promie npx cdk synth",
