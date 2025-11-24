@@ -14,6 +14,6 @@ export class MinecraftInvitationBackendStack extends Stack {
     ) {
         super(scope, id, props)
 
-        const { appName, stage } = props
+        const { appName: _appName, stage: _stage } = props
     }
 }
