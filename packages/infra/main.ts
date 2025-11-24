@@ -11,11 +11,10 @@ const {
   CDK_DEPLOY_REGION = process.env.CDK_DEFAULT_REGION,
   APP_NAME = 'MinecraftInvitation',
   STAGE = process.env.NODE_ENV || 'staging',
+  DOMAIN_NAME,
+  FRONTEND_SUBDOMAIN,
+  BACKEND_SUBDOMAIN,
 } = process.env
-
-const DOMAIN_NAME = process.env.DOMAIN_NAME || 'pyutasane.com'
-const FRONTEND_SUBDOMAIN =
-  process.env.FRONTEND_SUBDOMAIN || 'patrick-minecraft-invitation'
 
 const baseProps: StackProps = {
   env: {
@@ -27,6 +26,7 @@ const baseProps: StackProps = {
 const app = new App()
 
 let frontendCertificateStack
+let backendCertificateStack
 
 if (DOMAIN_NAME && FRONTEND_SUBDOMAIN) {
   frontendCertificateStack = new CertificateStack(
@@ -45,11 +45,30 @@ if (DOMAIN_NAME && FRONTEND_SUBDOMAIN) {
   )
 }
 
+if (DOMAIN_NAME && BACKEND_SUBDOMAIN) {
+  backendCertificateStack = new CertificateStack(
+    app,
+    `${APP_NAME}BackendCertificateStack`,
+    {
+      env: {
+        account: CDK_DEPLOY_ACCOUNT,
+        region: CDK_DEPLOY_REGION,
+      },
+      stackName: `${APP_NAME}-Backend-Certificate-${STAGE}`,
+      domainName: DOMAIN_NAME,
+      subdomains: [BACKEND_SUBDOMAIN],
+    },
+  )
+}
+
 new MinecraftInvitationBackendStack(app, `${APP_NAME}BackendStack`, {
   ...baseProps,
   stackName: `${APP_NAME}-Backend-${STAGE}`,
   appName: APP_NAME,
   stage: STAGE,
+  domainName: DOMAIN_NAME,
+  apiSubdomain: BACKEND_SUBDOMAIN,
+  certificate: backendCertificateStack?.certificate,
 })
 
 new MinecraftInvitationFrontendStack(app, `${APP_NAME}FrontendStack`, {
