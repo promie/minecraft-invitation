@@ -31,7 +31,7 @@ export class FrontendHostingConstruct extends Construct {
         this.customDomain = fullDomain
 
         this.bucket = new s3.Bucket(this, 'FrontendBucket', {
-            bucketName: `${appName.toLowerCase()}-frontend-${stage}-${process.env.CDK_DEFAULT_ACCOUNT}-${process.env.CDK_DEFAULT_REGION}`,
+            bucketName: `mi-frontend-${stage}`,
             publicReadAccess: false,
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             removalPolicy: RemovalPolicy.DESTROY,
