@@ -681,46 +681,73 @@ function App() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring' }}
             >
-              <div style={{ fontSize: '2rem', marginBottom: '15px' }}>💎</div>
-              <p
-                style={{
-                  color: '#56ab2f',
-                  fontSize: '1rem',
-                  marginBottom: '15px',
-                  textShadow: '2px 2px 0 #000',
-                  lineHeight: '1.6',
-                }}
-              >
-                THANKS FOR RSVP, {savedRsvp.name.toUpperCase()}!
-                <br />
-                FOR {savedRsvp.guests} {savedRsvp.guests === 1 ? 'PLAYER' : 'PLAYERS'}
-                <br />
-                <span style={{ color: '#f1c40f', fontSize: '0.9rem' }}>
-                  WE CAN'T WAIT TO SEE YOU!
-                </span>
-              </p>
+              {savedRsvp.attending === 'no' ? (
+                <>
+                  <div style={{ fontSize: '2rem', marginBottom: '15px' }}>😢</div>
+                  <p
+                    style={{
+                      color: '#e74c3c',
+                      fontSize: '1rem',
+                      marginBottom: '15px',
+                      textShadow: '2px 2px 0 #000',
+                      lineHeight: '1.6',
+                    }}
+                  >
+                    SORRY TO HEAR YOU CAN'T MAKE IT,{' '}
+                    {savedRsvp.name.toUpperCase()}!
+                    <br />
+                    <span style={{ color: '#f1c40f', fontSize: '0.9rem' }}>
+                      YOU CAN ALWAYS CHANGE YOUR MIND
+                      <br />
+                      AND EDIT YOUR RSVP!
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: '2rem', marginBottom: '15px' }}>💎</div>
+                  <p
+                    style={{
+                      color: '#56ab2f',
+                      fontSize: '1rem',
+                      marginBottom: '15px',
+                      textShadow: '2px 2px 0 #000',
+                      lineHeight: '1.6',
+                    }}
+                  >
+                    THANKS FOR RSVP, {savedRsvp.name.toUpperCase()}!
+                    <br />
+                    FOR {savedRsvp.guests}{' '}
+                    {savedRsvp.guests === 1 ? 'PLAYER' : 'PLAYERS'}
+                    <br />
+                    <span style={{ color: '#f1c40f', fontSize: '0.9rem' }}>
+                      WE CAN'T WAIT TO SEE YOU!
+                    </span>
+                  </p>
 
-              <div
-                style={{
-                  marginTop: '30px',
-                  marginBottom: '20px',
-                  padding: '20px',
-                  backgroundColor: 'rgba(86, 171, 47, 0.1)',
-                  border: '3px solid #56ab2f',
-                }}
-              >
-                <p
-                  style={{
-                    color: '#fff',
-                    fontSize: '0.9rem',
-                    marginBottom: '15px',
-                    textShadow: '2px 2px 0 #000',
-                  }}
-                >
-                  COUNTDOWN TO D-DAY:
-                </p>
-                <DaysUntil />
-              </div>
+                  <div
+                    style={{
+                      marginTop: '30px',
+                      marginBottom: '20px',
+                      padding: '20px',
+                      backgroundColor: 'rgba(86, 171, 47, 0.1)',
+                      border: '3px solid #56ab2f',
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        marginBottom: '15px',
+                        textShadow: '2px 2px 0 #000',
+                      }}
+                    >
+                      COUNTDOWN TO D-DAY:
+                    </p>
+                    <DaysUntil />
+                  </div>
+                </>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -855,9 +882,14 @@ function App() {
                     <select
                       className="mc-input"
                       value={rsvp.attending}
-                      onChange={e =>
-                        setRsvp({ ...rsvp, attending: e.target.value })
-                      }
+                      onChange={e => {
+                        const attending = e.target.value as 'yes' | 'no'
+                        setRsvp({
+                          ...rsvp,
+                          attending,
+                          guests: attending === 'no' ? 0 : rsvp.guests || 1,
+                        })
+                      }}
                     >
                       <option value="yes">YES, I'LL BE THERE!</option>
                       <option value="no">NO, CAN'T MAKE IT</option>
@@ -885,29 +917,36 @@ function App() {
                     >
                       <motion.button
                         type="button"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        whileHover={rsvp.attending === 'no' ? {} : { scale: 1.1 }}
+                        whileTap={rsvp.attending === 'no' ? {} : { scale: 0.9 }}
                         onClick={() =>
                           setRsvp({
                             ...rsvp,
-                            guests: Math.max(1, rsvp.guests - 1),
+                            guests: Math.max(
+                              rsvp.attending === 'no' ? 0 : 1,
+                              rsvp.guests - 1,
+                            ),
                           })
                         }
+                        disabled={rsvp.attending === 'no'}
                         style={{
                           fontFamily: "'Press Start 2P', cursive",
-                          backgroundColor: '#7d7d7d',
-                          color: 'white',
+                          backgroundColor:
+                            rsvp.attending === 'no' ? '#555' : '#7d7d7d',
+                          color: rsvp.attending === 'no' ? '#999' : 'white',
                           border: '2px solid #7d7d7d',
                           width: '50px',
                           height: '50px',
                           fontSize: '20px',
-                          cursor: 'pointer',
+                          cursor:
+                            rsvp.attending === 'no' ? 'not-allowed' : 'pointer',
                           boxShadow:
                             'inset -2px -2px 0px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px 0px rgba(255, 255, 255, 0.5)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           flexShrink: 0,
+                          opacity: rsvp.attending === 'no' ? 0.5 : 1,
                         }}
                       >
                         −
@@ -939,21 +978,25 @@ function App() {
                             guests: Math.min(10, rsvp.guests + 1),
                           })
                         }
+                        disabled={rsvp.attending === 'no'}
                         style={{
                           fontFamily: "'Press Start 2P', cursive",
-                          backgroundColor: '#7d7d7d',
-                          color: 'white',
+                          backgroundColor:
+                            rsvp.attending === 'no' ? '#555' : '#7d7d7d',
+                          color: rsvp.attending === 'no' ? '#999' : 'white',
                           border: '2px solid #7d7d7d',
                           width: '50px',
                           height: '50px',
                           fontSize: '20px',
-                          cursor: 'pointer',
+                          cursor:
+                            rsvp.attending === 'no' ? 'not-allowed' : 'pointer',
                           boxShadow:
                             'inset -2px -2px 0px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px 0px rgba(255, 255, 255, 0.5)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           flexShrink: 0,
+                          opacity: rsvp.attending === 'no' ? 0.5 : 1,
                         }}
                       >
                         +
