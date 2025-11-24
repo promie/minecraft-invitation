@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import steveImg from './assets/steve.png'
@@ -154,13 +154,212 @@ const Sun = () => {
   )
 }
 
+const DaysUntil = () => {
+  const [days, setDays] = useState(0)
+
+  useEffect(() => {
+    const calculateDays = () => {
+      const now = new Date()
+      
+      // Get current date in Sydney timezone
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Australia/Sydney',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      
+      const nowParts = formatter.formatToParts(now)
+      const currentYear = parseInt(nowParts.find(p => p.type === 'year')!.value)
+      const currentMonth = parseInt(nowParts.find(p => p.type === 'month')!.value) - 1
+      const currentDay = parseInt(nowParts.find(p => p.type === 'day')!.value)
+      
+      // Target: December 6 (always this year or next year)
+      const targetMonth = 11 // December (0-indexed)
+      const targetDay = 6
+      
+      // Create target date for this year
+      const targetThisYear = new Date(currentYear, targetMonth, targetDay)
+      const currentDate = new Date(currentYear, currentMonth, currentDay)
+      
+      // Calculate days until December 6
+      let daysUntil = Math.ceil((targetThisYear.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+      
+      // If December 6 has passed this year, calculate for next year
+      if (daysUntil < 0) {
+        const targetNextYear = new Date(currentYear + 1, targetMonth, targetDay)
+        daysUntil = Math.ceil((targetNextYear.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+      }
+      
+      setDays(Math.max(0, daysUntil))
+    }
+
+    calculateDays()
+    // Update once per day
+    const interval = setInterval(calculateDays, 1000 * 60 * 60)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        border: '3px solid #56ab2f',
+        padding: '20px',
+        textAlign: 'center',
+        marginTop: '20px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '3rem',
+          color: '#56ab2f',
+          fontWeight: 'bold',
+          textShadow: '2px 2px 0 #000',
+          marginBottom: '10px',
+        }}
+      >
+        {days}
+      </div>
+      <div style={{ fontSize: '1rem', color: '#fff', textShadow: '2px 2px 0 #000' }}>
+        DAYS UNTIL D-DAY
+        <br />
+        <span style={{ fontSize: '0.8rem', color: '#f1c40f' }}>DECEMBER 6TH</span>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [rsvp, setRsvp] = useState({ name: '', attending: 'yes', guests: 1 })
   const [submitted, setSubmitted] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [savedRsvp, setSavedRsvp] = useState<{
+    name: string
+    attending: string
+    guests: number
+  } | null>(null)
+  const [isMobile, setIsMobile] = useState(true)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      // Consider mobile if width is less than 768px
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Load RSVP from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('minecraft-rsvp')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Use setTimeout to avoid synchronous setState in effect
+        setTimeout(() => setSavedRsvp(parsed), 0)
+      } catch (e) {
+        console.error('Error parsing saved RSVP:', e)
+      }
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // If attending is "no", remove from localStorage
+    if (rsvp.attending === 'no') {
+      localStorage.removeItem('minecraft-rsvp')
+      setSavedRsvp(null)
+    } else {
+      // Save to localStorage
+      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
+      setSavedRsvp(rsvp)
+    }
     setSubmitted(true)
+  }
+
+  const handleEditRsvp = () => {
+    setIsModalOpen(true)
+    setRsvp(savedRsvp || { name: '', attending: 'yes', guests: 1 })
+    setSubmitted(false)
+  }
+
+  const handleUpdateRsvp = (e: React.FormEvent) => {
+    e.preventDefault()
+    // If attending is "no", remove from localStorage
+    if (rsvp.attending === 'no') {
+      localStorage.removeItem('minecraft-rsvp')
+      setSavedRsvp(null)
+    } else {
+      // Update localStorage
+      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
+      setSavedRsvp(rsvp)
+    }
+    setSubmitted(true)
+  }
+
+  // Show desktop message if not on mobile
+  if (!isMobile) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          padding: '20px',
+          textAlign: 'center',
+          backgroundColor: '#1a1a1a',
+          color: '#fff',
+        }}
+      >
+        <div
+          className="mc-card"
+          style={{
+            maxWidth: '600px',
+            padding: '40px',
+          }}
+        >
+          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📱</div>
+          <h1
+            style={{
+              fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+              color: '#56ab2f',
+              textShadow: '2px 2px 0 #000',
+              marginBottom: '20px',
+              fontFamily: "'Press Start 2P', cursive",
+            }}
+          >
+            MOBILE ONLY
+          </h1>
+          <p
+            style={{
+              fontSize: 'clamp(0.9rem, 2vw, 1.2rem)',
+              lineHeight: '1.6',
+              marginBottom: '20px',
+              color: '#fff',
+            }}
+          >
+            THIS IS BUILT FOR MOBILE
+            <br />
+            AND IT'S NOT REALLY FOR DESKTOP
+            <br />
+            <span style={{ color: '#f1c40f', marginTop: '10px', display: 'block' }}>
+              PLEASE VIEW IT ON MOBILE
+            </span>
+          </p>
+          <p style={{ fontSize: '0.8rem', color: '#7d7d7d', marginTop: '30px' }}>
+            THANKS!
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -261,7 +460,7 @@ function App() {
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
               style={{
-                fontSize: 'clamp(6rem, 15vw, 10rem)',
+                fontSize: 'clamp(8rem, 20vw, 14rem)',
                 color: '#56ab2f',
                 textShadow: '6px 6px 0 #000, 0 0 20px rgba(86, 171, 47, 0.5)',
                 position: 'absolute',
@@ -340,7 +539,7 @@ function App() {
 
         <h1
           style={{
-            fontSize: 'clamp(2rem, 5vw, 4rem)',
+            fontSize: 'clamp(2.5rem, 6vw, 5rem)',
             color: '#fff',
             textShadow: '4px 4px 0 #000',
             marginTop: '10px',
@@ -441,116 +640,282 @@ function App() {
               width: '100%',
               paddingTop: '10px',
               color: '#f1c40f',
-              fontSize: '0.8rem',
+              fontSize: '0.7rem',
+              lineHeight: '1.6',
             }}
           >
-            RSVP TO MOM - 123 456 7890
+            <div>RSVP:</div>
+            <div>PATTY: 0466 247 568</div>
+            <div>PROMIE: 0423 702 138</div>
           </div>
         </div>
 
-        <div className="mc-card">
-          <h3 style={{ color: '#fff', textShadow: '2px 2px 0 #000' }}>RSVP</h3>
-          {!submitted ? (
-            <form onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
-              <div style={{ marginBottom: '15px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '10px',
-                    textAlign: 'left',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  GAMER TAG (NAME):
-                </label>
-                <input
-                  type="text"
-                  className="mc-input"
-                  value={rsvp.name}
-                  onChange={e => setRsvp({ ...rsvp, name: e.target.value })}
-                  required
-                  placeholder="Steve"
-                />
-              </div>
+        {/* RSVP Section - Conditional Rendering */}
+        {savedRsvp ? (
+          <div className="mc-card" style={{ textAlign: 'center' }}>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring' }}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: '15px' }}>💎</div>
+              <p
+                style={{
+                  color: '#56ab2f',
+                  fontSize: '1rem',
+                  marginBottom: '15px',
+                  textShadow: '2px 2px 0 #000',
+                  lineHeight: '1.6',
+                }}
+              >
+                THANKS FOR RSVP, {savedRsvp.name.toUpperCase()}!
+                <br />
+                FOR {savedRsvp.guests} {savedRsvp.guests === 1 ? 'PLAYER' : 'PLAYERS'}
+                <br />
+                <span style={{ color: '#f1c40f', fontSize: '0.9rem' }}>
+                  WE CAN'T WAIT TO SEE YOU!
+                </span>
+              </p>
 
-              <div style={{ marginBottom: '15px' }}>
-                <label
+              <div
+                style={{
+                  marginTop: '30px',
+                  marginBottom: '20px',
+                  padding: '20px',
+                  backgroundColor: 'rgba(86, 171, 47, 0.1)',
+                  border: '3px solid #56ab2f',
+                }}
+              >
+                <p
                   style={{
-                    display: 'block',
-                    marginBottom: '10px',
-                    textAlign: 'left',
-                    fontSize: '0.8rem',
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    marginBottom: '15px',
+                    textShadow: '2px 2px 0 #000',
                   }}
                 >
-                  ARE YOU COMING?
-                </label>
-                <select
-                  className="mc-input"
-                  value={rsvp.attending}
-                  onChange={e =>
-                    setRsvp({ ...rsvp, attending: e.target.value })
-                  }
-                >
-                  <option value="yes">YES, I'LL BE THERE!</option>
-                  <option value="no">NO, CAN'T MAKE IT</option>
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '10px',
-                    textAlign: 'left',
-                    fontSize: '0.8rem',
-                  }}
-                >
-                  NUMBER OF PLAYERS:
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  className="mc-input"
-                  value={rsvp.guests}
-                  onChange={e =>
-                    setRsvp({ ...rsvp, guests: parseInt(e.target.value) })
-                  }
-                />
+                  COUNTDOWN TO D-DAY:
+                </p>
+                <DaysUntil />
               </div>
 
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="mc-btn mc-btn-primary"
-                type="submit"
-                style={{ width: '100%' }}
-              >
-                CONFIRM
-              </motion.button>
-            </form>
-          ) : (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring' }}
-            >
-              <div style={{ fontSize: '3rem', margin: '20px 0' }}>💎</div>
-              <p
+                className="mc-btn"
+                onClick={handleEditRsvp}
                 style={{
-                  color: '#56ab2f',
-                  fontSize: '1.2rem',
-                  margin: '20px 0',
-                  textShadow: '2px 2px 0 #000',
+                  width: '100%',
+                  fontSize: '1rem',
+                  padding: '15px',
+                  marginTop: '20px',
+                  backgroundColor: '#7d7d7d',
                 }}
               >
-                RSVP RECEIVED!
-              </p>
-              <p>SEE YOU THERE!</p>
+                ✏️ EDIT RSVP
+              </motion.button>
             </motion.div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="mc-card" style={{ textAlign: 'center' }}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="mc-btn mc-btn-primary"
+              onClick={() => setIsModalOpen(true)}
+              style={{ width: '100%', fontSize: '1.2rem', padding: '20px' }}
+            >
+              📝 RSVP NOW
+            </motion.button>
+          </div>
+        )}
       </motion.main>
+
+      {/* RSVP Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsModalOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '20px',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.5, y: -100 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.5, y: -100 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              onClick={e => e.stopPropagation()}
+              className="mc-card"
+              style={{
+                maxWidth: '500px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                position: 'relative',
+              }}
+            >
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: '#e74c3c',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '1.5rem',
+                  width: '40px',
+                  height: '40px',
+                  cursor: 'pointer',
+                  fontFamily: "'Press Start 2P', cursive",
+                  boxShadow:
+                    'inset -2px -2px 0px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px 0px rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                ×
+              </button>
+
+              <h3 style={{ color: '#fff', textShadow: '2px 2px 0 #000' }}>
+                {savedRsvp ? 'EDIT RSVP' : 'RSVP'}
+              </h3>
+              {!submitted ? (
+                <form
+                  onSubmit={savedRsvp ? handleUpdateRsvp : handleSubmit}
+                  style={{ marginTop: '20px' }}
+                >
+                  <div style={{ marginBottom: '15px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: '10px',
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      GAMER TAG (NAME):
+                    </label>
+                    <input
+                      type="text"
+                      className="mc-input"
+                      value={rsvp.name}
+                      onChange={e => setRsvp({ ...rsvp, name: e.target.value })}
+                      required
+                      placeholder="Steve"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '15px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: '10px',
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      ARE YOU COMING?
+                    </label>
+                    <select
+                      className="mc-input"
+                      value={rsvp.attending}
+                      onChange={e =>
+                        setRsvp({ ...rsvp, attending: e.target.value })
+                      }
+                    >
+                      <option value="yes">YES, I'LL BE THERE!</option>
+                      <option value="no">NO, CAN'T MAKE IT</option>
+                    </select>
+                  </div>
+
+                  <div style={{ marginBottom: '25px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: '10px',
+                        textAlign: 'left',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      NUMBER OF PLAYERS:
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      className="mc-input"
+                      value={rsvp.guests}
+                      onChange={e =>
+                        setRsvp({ ...rsvp, guests: parseInt(e.target.value) })
+                      }
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="mc-btn mc-btn-primary"
+                    type="submit"
+                    style={{ width: '100%' }}
+                  >
+                    CONFIRM
+                  </motion.button>
+                </form>
+              ) : (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring' }}
+                >
+                  <div style={{ fontSize: '3rem', margin: '20px 0' }}>💎</div>
+                  <p
+                    style={{
+                      color: '#56ab2f',
+                      fontSize: '1.2rem',
+                      margin: '20px 0',
+                      textShadow: '2px 2px 0 #000',
+                    }}
+                  >
+                    RSVP RECEIVED!
+                  </p>
+                  <p>SEE YOU THERE!</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="mc-btn mc-btn-primary"
+                    onClick={() => {
+                      setIsModalOpen(false)
+                      setTimeout(() => {
+                        setSubmitted(false)
+                        if (savedRsvp) {
+                          setRsvp(savedRsvp)
+                        }
+                      }, 500)
+                    }}
+                    style={{ width: '100%', marginTop: '20px' }}
+                  >
+                    CLOSE
+                  </motion.button>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <footer
         style={{
@@ -562,7 +927,7 @@ function App() {
           zIndex: 2,
         }}
       >
-        <p>Don't be a creeper! RSVP by Oct 20th.</p>
+        <p>Don't be a creeper! RSVP by Nov 30th.</p>
       </footer>
     </div>
   )
