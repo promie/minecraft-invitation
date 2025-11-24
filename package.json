@@ -8,12 +8,14 @@
     "minecraft-invitation": "bin/minecraft-invitation.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build --workspaces",
+    "build:infra": "npm run build -w @minecraft-invitation/infra",
+    "build:frontend": "npm run build -w @minecraft-invitation/frontend",
+    "dev": "npm run dev -w @minecraft-invitation/frontend",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
     "deploy": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --all --require-approval never",
-    "build:infra": "npm run build --workspace=@minecraft-invitation/infra",
     "deploy:infra": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --require-approval never",
     "diff": "AWS_PROFILE=promie npx cdk diff",
     "synth": "AWS_PROFILE=promie npx cdk synth",
