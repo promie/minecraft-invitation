@@ -17,7 +17,7 @@
     "test": "jest",
     "cdk": "cdk",
     "deploy": "AWS_PROFILE=promie npm run build:frontend && AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --all --require-approval never",
-    "deploy:infra": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --require-approval never",
+    "deploy:infra": "AWS_PROFILE=promie npm run build:infra && AWS_PROFILE=promie npx cdk deploy --all --require-approval never",
     "diff": "AWS_PROFILE=promie npx cdk diff",
     "synth": "AWS_PROFILE=promie npx cdk synth",
     "destroy": "AWS_PROFILE=promie npx cdk destroy --all --force",
