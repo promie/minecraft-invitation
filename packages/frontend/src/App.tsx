@@ -7,6 +7,13 @@ import creeperImg from './assets/creeper.png'
 import sheepImg from './assets/sheep.png'
 import cakeImg from './assets/cake.png'
 import giftImg from './assets/gift.png'
+import {
+  getRsvp,
+  saveRsvp,
+  getRsvpFromStorage,
+  type RsvpData,
+  type RsvpResponse,
+} from './services/rsvpService'
 
 const BreakableBlock = ({
   delay,
@@ -235,11 +242,7 @@ function App() {
   const [rsvp, setRsvp] = useState({ name: '', attending: 'yes', guests: 1 })
   const [submitted, setSubmitted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [savedRsvp, setSavedRsvp] = useState<{
-    name: string
-    attending: string
-    guests: number
-  } | null>(null)
+  const [savedRsvp, setSavedRsvp] = useState<RsvpResponse | null>(null)
   const [isMobile, setIsMobile] = useState(true)
 
   // Check if device is mobile
@@ -255,32 +258,49 @@ function App() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Load RSVP from localStorage on mount
+  // Load RSVP from localStorage and API on mount
   useEffect(() => {
-    const saved = localStorage.getItem('minecraft-rsvp')
-    if (saved) {
+    const loadRsvp = async () => {
       try {
-        const parsed = JSON.parse(saved)
-        // Use setTimeout to avoid synchronous setState in effect
-        setTimeout(() => setSavedRsvp(parsed), 0)
+        // First, try to get from localStorage
+        const storedRsvp = getRsvpFromStorage()
+        if (storedRsvp?.name) {
+          // If we have a name in localStorage, fetch from API to get latest data
+          const rsvpData = await getRsvp(storedRsvp.name)
+          if (rsvpData) {
+            setSavedRsvp(rsvpData)
+          } else {
+            // If not found in API, use localStorage data
+            setSavedRsvp(storedRsvp)
+          }
+        }
       } catch (e) {
-        console.error('Error parsing saved RSVP:', e)
+        console.error('Error loading RSVP:', e)
+        // Fallback to localStorage if API fails
+        const storedRsvp = getRsvpFromStorage()
+        if (storedRsvp) {
+          setSavedRsvp(storedRsvp)
+        }
       }
     }
+    loadRsvp()
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // If attending is "no", remove from localStorage
-    if (rsvp.attending === 'no') {
-      localStorage.removeItem('minecraft-rsvp')
-      setSavedRsvp(null)
-    } else {
-      // Save to localStorage
-      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
-      setSavedRsvp(rsvp)
+    try {
+      const saved = await saveRsvp(rsvp as RsvpData)
+      if (saved) {
+        setSavedRsvp(saved)
+      } else {
+        setSavedRsvp(null)
+      }
+      setSubmitted(true)
+    } catch (error) {
+      console.error('Error submitting RSVP:', error)
+      // Still show success message to user, but log error
+      setSubmitted(true)
     }
-    setSubmitted(true)
   }
 
   const handleEditRsvp = () => {
@@ -289,18 +309,21 @@ function App() {
     setSubmitted(false)
   }
 
-  const handleUpdateRsvp = (e: React.FormEvent) => {
+  const handleUpdateRsvp = async (e: React.FormEvent) => {
     e.preventDefault()
-    // If attending is "no", remove from localStorage
-    if (rsvp.attending === 'no') {
-      localStorage.removeItem('minecraft-rsvp')
-      setSavedRsvp(null)
-    } else {
-      // Update localStorage
-      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
-      setSavedRsvp(rsvp)
+    try {
+      const saved = await saveRsvp(rsvp as RsvpData)
+      if (saved) {
+        setSavedRsvp(saved)
+      } else {
+        setSavedRsvp(null)
+      }
+      setSubmitted(true)
+    } catch (error) {
+      console.error('Error updating RSVP:', error)
+      // Still show success message to user, but log error
+      setSubmitted(true)
     }
-    setSubmitted(true)
   }
 
   // Show desktop message if not on mobile
@@ -815,7 +838,6 @@ function App() {
                       value={rsvp.name}
                       onChange={e => setRsvp({ ...rsvp, name: e.target.value })}
                       required
-                      placeholder="Steve"
                     />
                   </div>
 
@@ -853,16 +875,90 @@ function App() {
                     >
                       NUMBER OF PLAYERS:
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      className="mc-input"
-                      value={rsvp.guests}
-                      onChange={e =>
-                        setRsvp({ ...rsvp, guests: parseInt(e.target.value) })
-                      }
-                    />
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        width: '100%',
+                      }}
+                    >
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() =>
+                          setRsvp({
+                            ...rsvp,
+                            guests: Math.max(1, rsvp.guests - 1),
+                          })
+                        }
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          backgroundColor: '#7d7d7d',
+                          color: 'white',
+                          border: '2px solid #7d7d7d',
+                          width: '50px',
+                          height: '50px',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          boxShadow:
+                            'inset -2px -2px 0px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px 0px rgba(255, 255, 255, 0.5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        −
+                      </motion.button>
+                      <div
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          backgroundColor: '#000',
+                          color: '#fff',
+                          border: '2px solid #7d7d7d',
+                          padding: '10px 20px',
+                          flex: 1,
+                          textAlign: 'center',
+                          fontSize: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {rsvp.guests}
+                      </div>
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() =>
+                          setRsvp({
+                            ...rsvp,
+                            guests: Math.min(10, rsvp.guests + 1),
+                          })
+                        }
+                        style={{
+                          fontFamily: "'Press Start 2P', cursive",
+                          backgroundColor: '#7d7d7d',
+                          color: 'white',
+                          border: '2px solid #7d7d7d',
+                          width: '50px',
+                          height: '50px',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          boxShadow:
+                            'inset -2px -2px 0px 0px rgba(0, 0, 0, 0.5), inset 2px 2px 0px 0px rgba(255, 255, 255, 0.5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        +
+                      </motion.button>
+                    </div>
                   </div>
 
                   <motion.button
