@@ -7,9 +7,18 @@ import creeperImg from './assets/creeper.png'
 import sheepImg from './assets/sheep.png'
 import cakeImg from './assets/cake.png'
 import giftImg from './assets/gift.png'
-import balloonImg from './assets/balloon.png'
 
-const BreakableBlock = ({ delay, left, top, type }) => {
+const BreakableBlock = ({
+  delay,
+  left,
+  top,
+  type,
+}: {
+  delay: number
+  left: string
+  top: string
+  type: string
+}) => {
   const [isBroken, setIsBroken] = useState(false)
 
   const handleBreak = () => {
@@ -79,7 +88,15 @@ const BreakableBlock = ({ delay, left, top, type }) => {
   )
 }
 
-const Diamond = ({ delay, right, top }) => {
+const Diamond = ({
+  delay,
+  right,
+  top,
+}: {
+  delay: number
+  right: string
+  top: string
+}) => {
   return (
     <motion.div
       initial={{ rotate: 45, opacity: 0 }}
@@ -141,7 +158,7 @@ function App() {
   const [rsvp, setRsvp] = useState({ name: '', attending: 'yes', guests: 1 })
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = e => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
   }
@@ -496,7 +513,9 @@ function App() {
                   max="10"
                   className="mc-input"
                   value={rsvp.guests}
-                  onChange={e => setRsvp({ ...rsvp, guests: e.target.value })}
+                  onChange={e =>
+                    setRsvp({ ...rsvp, guests: parseInt(e.target.value) })
+                  }
                 />
               </div>
 

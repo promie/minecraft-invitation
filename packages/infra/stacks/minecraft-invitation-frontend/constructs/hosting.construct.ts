@@ -82,7 +82,7 @@ export class FrontendHostingConstruct extends Construct {
     new s3deploy.BucketDeployment(this, 'DeployFrontend', {
       sources: [
         s3deploy.Source.asset(
-          path.join(__dirname, '../../../../../frontend/dist'),
+          path.join(__dirname, '../../../../frontend/dist'),
         ),
       ],
       destinationBucket: this.bucket,
