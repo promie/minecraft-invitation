@@ -1,10 +1,10 @@
 {
-    "name": "@minecraft-invitation/infra",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "build": "tsc",
-        "watch": "tsc -w",
-        "test": "jest"
-    }
+  "name": "@minecraft-invitation/infra",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest"
+  }
 }

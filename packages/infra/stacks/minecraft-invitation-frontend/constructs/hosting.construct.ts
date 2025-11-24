@@ -25,7 +25,7 @@ export class FrontendHostingConstruct extends Construct {
     constructor(scope: Construct, id: string, props: FrontendHostingProps) {
         super(scope, id)
 
-        const { domainName, subdomain, certificate, appName, stage } = props
+        const { domainName, subdomain, certificate, appName: _appName, stage } = props
         const fullDomain =
             domainName && subdomain ? `${subdomain}.${domainName}` : undefined
         this.customDomain = fullDomain
@@ -75,7 +75,9 @@ export class FrontendHostingConstruct extends Construct {
 
         new s3deploy.BucketDeployment(this, 'DeployFrontend', {
             sources: [
-                s3deploy.Source.asset(path.join(__dirname, '../../../../frontend/dist')),
+                s3deploy.Source.asset(
+                    path.join(__dirname, '../../../../frontend/dist'),
+                ),
             ],
             destinationBucket: this.bucket,
             distribution: this.distribution,
