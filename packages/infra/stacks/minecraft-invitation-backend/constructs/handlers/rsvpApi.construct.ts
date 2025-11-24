@@ -9,6 +9,7 @@ import { StandardRestApi } from '../../../../common/StandardRestApi'
 import type { Config as GetRsvpConfig } from '../../../../app/src/minecraft-invitation/handlers/getRSVP/config'
 import type { Config as GetAllRsvpsConfig } from '../../../../app/src/minecraft-invitation/handlers/getAllRSVPs/config'
 import type { Config as PostRsvpConfig } from '../../../../app/src/minecraft-invitation/handlers/postRSVP/config'
+import type { Config as PatchRsvpConfig } from '../../../../app/src/minecraft-invitation/handlers/patchRSVP/config'
 import * as path from 'path'
 
 export type RsvpApiConstructProps = {
@@ -25,6 +26,7 @@ export class RsvpApiConstruct extends Construct {
   public readonly getRsvpHandler: lambda.Function
   public readonly getAllRsvpsHandler: lambda.Function
   public readonly postRsvpHandler: lambda.Function
+  public readonly patchRsvpHandler: lambda.Function
   public readonly apiUrl: string
 
   constructor(scope: Construct, id: string, props: RsvpApiConstructProps) {
@@ -81,6 +83,22 @@ export class RsvpApiConstruct extends Construct {
 
     rsvpTable.grantReadWriteData(this.postRsvpHandler)
 
+    this.patchRsvpHandler = new StandardLambda(this, 'PatchRsvpHandler', {
+      appName,
+      entry: path.join(
+        __dirname,
+        '../../../../app/src/minecraft-invitation/handlers/patchRSVP/patchRSVP.handler.ts',
+      ),
+      handler: 'handler',
+      memorySize: 256,
+      timeout: Duration.seconds(30),
+      environment: {
+        TABLE_NAME: rsvpTable.tableName,
+      } satisfies PatchRsvpConfig,
+    })
+
+    rsvpTable.grantReadWriteData(this.patchRsvpHandler)
+
     const restApi = new StandardRestApi(this, 'RestApi', {
       appName,
       stage,
@@ -112,6 +130,12 @@ export class RsvpApiConstruct extends Construct {
     rsvpByName.addMethod(
       'GET',
       new apigateway.LambdaIntegration(this.getRsvpHandler),
+    )
+
+    // PATCH /rsvp/{name} - update RSVP guests
+    rsvpByName.addMethod(
+      'PATCH',
+      new apigateway.LambdaIntegration(this.patchRsvpHandler),
     )
   }
 }
