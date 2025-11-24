@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import steveImg from './assets/steve.png'
@@ -154,13 +154,138 @@ const Sun = () => {
   )
 }
 
+const DaysUntil = () => {
+  const [days, setDays] = useState(0)
+
+  useEffect(() => {
+    const calculateDays = () => {
+      const now = new Date()
+      
+      // Get current date in Sydney timezone
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Australia/Sydney',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
+      
+      const nowParts = formatter.formatToParts(now)
+      const currentYear = parseInt(nowParts.find(p => p.type === 'year')!.value)
+      const currentMonth = parseInt(nowParts.find(p => p.type === 'month')!.value) - 1
+      const currentDay = parseInt(nowParts.find(p => p.type === 'day')!.value)
+      
+      // Target: December 6 (always this year or next year)
+      const targetMonth = 11 // December (0-indexed)
+      const targetDay = 6
+      
+      // Create target date for this year
+      const targetThisYear = new Date(currentYear, targetMonth, targetDay)
+      const currentDate = new Date(currentYear, currentMonth, currentDay)
+      
+      // Calculate days until December 6
+      let daysUntil = Math.ceil((targetThisYear.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+      
+      // If December 6 has passed this year, calculate for next year
+      if (daysUntil < 0) {
+        const targetNextYear = new Date(currentYear + 1, targetMonth, targetDay)
+        daysUntil = Math.ceil((targetNextYear.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+      }
+      
+      setDays(Math.max(0, daysUntil))
+    }
+
+    calculateDays()
+    // Update once per day
+    const interval = setInterval(calculateDays, 1000 * 60 * 60)
+    
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        border: '3px solid #56ab2f',
+        padding: '20px',
+        textAlign: 'center',
+        marginTop: '20px',
+      }}
+    >
+      <div
+        style={{
+          fontSize: '3rem',
+          color: '#56ab2f',
+          fontWeight: 'bold',
+          textShadow: '2px 2px 0 #000',
+          marginBottom: '10px',
+        }}
+      >
+        {days}
+      </div>
+      <div style={{ fontSize: '1rem', color: '#fff', textShadow: '2px 2px 0 #000' }}>
+        DAYS UNTIL D-DAY
+        <br />
+        <span style={{ fontSize: '0.8rem', color: '#f1c40f' }}>DECEMBER 6TH</span>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [rsvp, setRsvp] = useState({ name: '', attending: 'yes', guests: 1 })
   const [submitted, setSubmitted] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [savedRsvp, setSavedRsvp] = useState<{
+    name: string
+    attending: string
+    guests: number
+  } | null>(null)
+
+  // Load RSVP from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('minecraft-rsvp')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Use setTimeout to avoid synchronous setState in effect
+        setTimeout(() => setSavedRsvp(parsed), 0)
+      } catch (e) {
+        console.error('Error parsing saved RSVP:', e)
+      }
+    }
+  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // If attending is "no", remove from localStorage
+    if (rsvp.attending === 'no') {
+      localStorage.removeItem('minecraft-rsvp')
+      setSavedRsvp(null)
+    } else {
+      // Save to localStorage
+      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
+      setSavedRsvp(rsvp)
+    }
+    setSubmitted(true)
+  }
+
+  const handleEditRsvp = () => {
+    setIsModalOpen(true)
+    setRsvp(savedRsvp || { name: '', attending: 'yes', guests: 1 })
+    setSubmitted(false)
+  }
+
+  const handleUpdateRsvp = (e: React.FormEvent) => {
+    e.preventDefault()
+    // If attending is "no", remove from localStorage
+    if (rsvp.attending === 'no') {
+      localStorage.removeItem('minecraft-rsvp')
+      setSavedRsvp(null)
+    } else {
+      // Update localStorage
+      localStorage.setItem('minecraft-rsvp', JSON.stringify(rsvp))
+      setSavedRsvp(rsvp)
+    }
     setSubmitted(true)
   }
 
@@ -452,18 +577,85 @@ function App() {
           </div>
         </div>
 
-        {/* RSVP Button */}
-        <div className="mc-card" style={{ textAlign: 'center' }}>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="mc-btn mc-btn-primary"
-            onClick={() => setIsModalOpen(true)}
-            style={{ width: '100%', fontSize: '1.2rem', padding: '20px' }}
-          >
-            📝 RSVP NOW
-          </motion.button>
-        </div>
+        {/* RSVP Section - Conditional Rendering */}
+        {savedRsvp ? (
+          <div className="mc-card" style={{ textAlign: 'center' }}>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring' }}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: '15px' }}>💎</div>
+              <p
+                style={{
+                  color: '#56ab2f',
+                  fontSize: '1rem',
+                  marginBottom: '15px',
+                  textShadow: '2px 2px 0 #000',
+                  lineHeight: '1.6',
+                }}
+              >
+                THANKS FOR RSVP, {savedRsvp.name.toUpperCase()}!
+                <br />
+                FOR {savedRsvp.guests} {savedRsvp.guests === 1 ? 'PLAYER' : 'PLAYERS'}
+                <br />
+                <span style={{ color: '#f1c40f', fontSize: '0.9rem' }}>
+                  WE CAN'T WAIT TO SEE YOU!
+                </span>
+              </p>
+
+              <div
+                style={{
+                  marginTop: '30px',
+                  marginBottom: '20px',
+                  padding: '20px',
+                  backgroundColor: 'rgba(86, 171, 47, 0.1)',
+                  border: '3px solid #56ab2f',
+                }}
+              >
+                <p
+                  style={{
+                    color: '#fff',
+                    fontSize: '0.9rem',
+                    marginBottom: '15px',
+                    textShadow: '2px 2px 0 #000',
+                  }}
+                >
+                  COUNTDOWN TO D-DAY:
+                </p>
+                <DaysUntil />
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="mc-btn"
+                onClick={handleEditRsvp}
+                style={{
+                  width: '100%',
+                  fontSize: '1rem',
+                  padding: '15px',
+                  marginTop: '20px',
+                  backgroundColor: '#7d7d7d',
+                }}
+              >
+                ✏️ EDIT RSVP
+              </motion.button>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="mc-card" style={{ textAlign: 'center' }}>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="mc-btn mc-btn-primary"
+              onClick={() => setIsModalOpen(true)}
+              style={{ width: '100%', fontSize: '1.2rem', padding: '20px' }}
+            >
+              📝 RSVP NOW
+            </motion.button>
+          </div>
+        )}
       </motion.main>
 
       {/* RSVP Modal */}
@@ -526,10 +718,13 @@ function App() {
               </button>
 
               <h3 style={{ color: '#fff', textShadow: '2px 2px 0 #000' }}>
-                RSVP
+                {savedRsvp ? 'EDIT RSVP' : 'RSVP'}
               </h3>
               {!submitted ? (
-                <form onSubmit={handleSubmit} style={{ marginTop: '20px' }}>
+                <form
+                  onSubmit={savedRsvp ? handleUpdateRsvp : handleSubmit}
+                  style={{ marginTop: '20px' }}
+                >
                   <div style={{ marginBottom: '15px' }}>
                     <label
                       style={{
@@ -631,7 +826,12 @@ function App() {
                     className="mc-btn mc-btn-primary"
                     onClick={() => {
                       setIsModalOpen(false)
-                      setTimeout(() => setSubmitted(false), 500)
+                      setTimeout(() => {
+                        setSubmitted(false)
+                        if (savedRsvp) {
+                          setRsvp(savedRsvp)
+                        }
+                      }, 500)
                     }}
                     style={{ width: '100%', marginTop: '20px' }}
                   >
